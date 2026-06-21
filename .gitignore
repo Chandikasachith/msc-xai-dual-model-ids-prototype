@@ -1,0 +1,39 @@
+# Secrets — never commit
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Large local training artifacts (use prepare_streamlit_deploy.py for cloud slices)
+SecondModel/X_test_rf_cicids2017.npy
+SecondModel/y_test_rf_cicids2017.npy
+SecondModel/X_test_xgb_cicids2017_95percent.npy
+SecondModel/y_test_xgb_cicids2017_95percent.npy
+SecondModel/y_pred_*.npy
+SecondModel/y_pred_proba_*.npy
+SecondModel/cicids-2017/
+
+# Optional: keep repo small (remove these lines if you want them in git)
+archive/
+Presentation_Evidence/
+
+# Accidental key dumps
+*APIKey*
+*.env
+.env
