@@ -6,6 +6,8 @@ import streamlit as st
 import joblib
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
 import shap
@@ -1127,7 +1129,7 @@ if rf_pred != xgb_pred:
 else:
     st.success("✅ **Models Agree!** Both models predict the same class.")
 
-# --- OpenAI analyst notes (upload + Attack or disagreement) ---
+# --- OpenAI analyst notes ---
 if input_method == "Upload File":
     from llm_openai_advisory import (
         build_user_prompt,
@@ -1155,7 +1157,7 @@ if input_method == "Upload File":
         )
     elif not resolve_openai_api_key():
         st.warning(
-            "Add **OPENAI_API_KEY** to `.streamlit/secrets.toml` or your environment. "
+            "Add **OPENAI_API_KEY** to `.streamlit/secrets.toml`. "
             "See `.streamlit/secrets.toml.example`."
         )
     else:

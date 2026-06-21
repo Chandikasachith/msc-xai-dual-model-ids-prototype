@@ -50,7 +50,10 @@ Use a **private** repo if the project is thesis/research work.
 1. Sign in at [share.streamlit.io](https://share.streamlit.io) with GitHub.
 2. **New app** → select your repository.
 3. **Main file path:** `streamlit_dashboard.py`
-4. **Advanced settings → Secrets**, paste:
+4. **Advanced settings → Python version:** choose **3.12** (not 3.14).
+   - Streamlit Cloud **ignores** `.python-version` and `runtime.txt`.
+   - If the app was already deployed on 3.14, **delete the app** and redeploy — you cannot change Python on an existing deployment.
+5. **Advanced settings → Secrets**, paste:
 
 ```toml
 TEAMS_WEBHOOK_URL = "https://your-organization.webhook.office.com/webhookb2/..."
@@ -94,5 +97,7 @@ Works on **Hugging Face Spaces** (Streamlit SDK), **Render**, **Railway**, or a 
 |-------|-----|
 | `Error loading RF` / missing `.npy` | Run `python prepare_streamlit_deploy.py` and commit `*_deploy.npy` |
 | Git push rejected (large file) | Ensure full `X_test_*.npy` are gitignored; only commit `*_deploy.npy` |
+| `ModuleNotFoundError: joblib` | App built on Python 3.14 — delete app, redeploy with **Python 3.12** in Advanced settings |
+| Health check / connection reset | Usually app crash on startup — fix Python version first; check logs for import errors |
 | OpenAI / Teams not working on cloud | Add secrets in Streamlit Cloud settings (not in the repo) |
 | App sleeps / slow cold start | Normal on free tier; click **Load Models** after the page opens |
