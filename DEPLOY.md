@@ -52,7 +52,8 @@ Use a **private** repo if the project is thesis/research work.
 3. **Main file path:** `streamlit_dashboard.py`
 4. **Advanced settings → Python version:** choose **3.12** (not 3.14).
    - Streamlit Cloud **ignores** `.python-version` and `runtime.txt`.
-   - If the app was already deployed on 3.14, **delete the app** and redeploy — you cannot change Python on an existing deployment.
+   - This repo also includes **`environment.yml`** with `python=3.12`, which Streamlit prefers over `requirements.txt`.
+   - If the app was already deployed on 3.14, **delete the app** and redeploy — changing Python on an existing app does not work.
 5. **Advanced settings → Secrets**, paste:
 
 ```toml

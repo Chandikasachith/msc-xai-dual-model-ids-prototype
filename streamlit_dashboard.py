@@ -10,11 +10,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
-import shap
-import lime
-import lime.lime_tabular
-import eli5
-from eli5.sklearn import PermutationImportance
 from sklearn.preprocessing import LabelEncoder
 import warnings
 import sys
@@ -144,6 +139,10 @@ def load_models():
 
 def initialize_xai_explainers(package):
     """Set up SHAP, LIME, and permutation importance for each model."""
+    import shap
+    import lime.lime_tabular
+    from eli5.sklearn import PermutationImportance
+
     explainers = {'rf': {}, 'xgb': {}}
 
     if package['rf']['model'] is not None:
@@ -767,7 +766,7 @@ with col2:
             shap_explainer = st.session_state.xgb_explainers.get('shap')
             if shap_explainer:
                 try:
-                    if isinstance(shap_explainer, shap.explainers._tree.TreeExplainer):
+                    if type(shap_explainer).__name__ == 'TreeExplainer':
                         shap_values = shap_explainer.shap_values(xgb_input)
                     else:
                         shap_values = shap_explainer.shap_values(xgb_input[0])
@@ -966,7 +965,7 @@ with col2:
                 shap_explainer = st.session_state.xgb_explainers.get('shap')
                 if shap_explainer:
                     try:
-                        if isinstance(shap_explainer, shap.explainers._tree.TreeExplainer):
+                        if type(shap_explainer).__name__ == 'TreeExplainer':
                             shap_values = shap_explainer.shap_values(xgb_input)
                         else:
                             shap_values = shap_explainer.shap_values(xgb_input[0])
