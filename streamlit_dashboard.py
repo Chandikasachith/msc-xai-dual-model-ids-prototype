@@ -39,6 +39,7 @@ from xai_insight_language import (
     AI_DISCLAIMER_MARKDOWN,
     AI_DISCLAIMER_SHORT,
     build_xai_insight_lines,
+    build_xai_driver_cards_html,
     chart_feature_labels,
     chart_title,
     chart_xlabel_toward_prediction,
@@ -52,6 +53,15 @@ CHART_RED = '#F87171'
 CHART_BG = '#131F2E'
 CHART_TEXT = '#94A3B8'
 CHART_GRID = '#1E3044'
+DRIVER_TOP_N = 5
+
+HERO_SHIELD_SVG = (
+    '<svg class="hero-shield-icon" xmlns="http://www.w3.org/2000/svg" '
+    'viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.75" '
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+    '</svg>'
+)
 
 
 def style_chart(ax, fig):
@@ -176,20 +186,39 @@ DASHBOARD_CSS = """
         color: #0B1622 !important;
     }
     .page-hero {
-        background: linear-gradient(135deg, #0F1B2A 0%, #131F2E 100%);
-        border: 1px solid #1E3044;
+        background: linear-gradient(135deg, #1a2a3d 0%, #1f3349 50%, #243a52 100%);
+        border: 1px solid #2d4a66;
         border-radius: 12px;
         padding: 1.5rem 2rem;
         margin-bottom: 1.5rem;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
     }
     .page-hero h1 {
         color: #F9FAFB;
         font-size: 1.75rem;
         font-weight: 700;
         margin: 0 0 0.35rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .hero-shield {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 3rem;
+        height: 3rem;
+        background: #14B8A620;
+        border: 1px solid #14B8A650;
+        border-radius: 10px;
+    }
+    .hero-shield-icon {
+        width: 1.75rem;
+        height: 1.75rem;
     }
     .page-hero p {
-        color: #94A3B8;
+        color: #B8C5D3;
         font-size: 0.95rem;
         margin: 0;
     }
@@ -203,7 +232,7 @@ DASHBOARD_CSS = """
         font-size: 0.75rem;
         font-weight: 500;
     }
-    .status-chip.pending { background: #1E3044; color: #94A3B8; border-color: #374151; }
+    .status-chip.pending { background: #2a3f55; color: #CBD5E1; border-color: #3d556d; }
     .kpi-row {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
@@ -328,12 +357,190 @@ DASHBOARD_CSS = """
     .page-footer strong { color: #94A3B8; }
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
+    [data-testid="stToolbar"] { display: none; }
+    [data-testid="stDecoration"] { display: none; }
+    [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"] {
+        overflow: visible !important;
+    }
+    [data-testid="column"] {
+        overflow: visible !important;
+    }
+    .xai-driver-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin: 1rem 0 1.25rem;
+    }
+    .xai-driver-card-wrap {
+        position: relative;
+        cursor: help;
+    }
+    .xai-driver-card-wrap:hover {
+        z-index: 30;
+    }
+    .xai-driver-card {
+        background: #0F1B2A;
+        border: 1px solid #1E3044;
+        border-left: 3px solid #14B8A6;
+        border-radius: 12px;
+        padding: 1.1rem 1.25rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .xai-driver-card-wrap:hover .xai-driver-card {
+        border-color: #14B8A680;
+        box-shadow: 0 4px 20px rgba(20, 184, 166, 0.12);
+    }
+    .xai-driver-popup {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        background: #1a2838;
+        border: 1px solid #14B8A6;
+        border-radius: 12px;
+        padding: 1.1rem 1.2rem;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+        z-index: 40;
+        transition: opacity 0.18s ease, visibility 0.18s ease;
+    }
+    .xai-driver-card-wrap:hover .xai-driver-popup {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .xai-popup-title {
+        color: #F9FAFB;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    .xai-popup-field {
+        color: #64748B;
+        font-size: 0.78rem;
+        font-family: ui-monospace, monospace;
+        margin-bottom: 0.65rem;
+    }
+    .xai-popup-body {
+        color: #CBD5E1;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.85rem;
+        border-bottom: 1px solid #1E3044;
+    }
+    .xai-popup-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+    .xai-popup-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        font-size: 0.88rem;
+        color: #94A3B8;
+    }
+    .xai-popup-row strong {
+        color: #F9FAFB;
+        font-weight: 600;
+        text-align: right;
+    }
+    .xai-popup-row span:last-child {
+        text-align: right;
+        color: #E2E8F0;
+    }
+    .xai-driver-hint {
+        margin-left: auto;
+        color: #64748B;
+        font-size: 0.72rem;
+        font-style: italic;
+    }
+    .xai-driver-top {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.6rem;
+    }
+    .xai-driver-index {
+        background: #14B8A625;
+        color: #2DD4BF;
+        border: 1px solid #14B8A650;
+        border-radius: 8px;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        font-weight: 700;
+    }
+    .xai-driver-name {
+        color: #F9FAFB;
+        font-weight: 600;
+        font-size: 1.05rem;
+        flex: 1;
+        line-height: 1.3;
+    }
+    .xai-driver-pct {
+        color: #14B8A6;
+        font-weight: 700;
+        font-size: 1.35rem;
+        white-space: nowrap;
+    }
+    .xai-driver-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.55rem;
+    }
+    .xai-badge {
+        border-radius: 999px;
+        padding: 0.2rem 0.65rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .xai-badge-strong { background: #14B8A630; color: #2DD4BF; border: 1px solid #14B8A660; }
+    .xai-badge-medium { background: #60A5FA25; color: #93C5FD; border: 1px solid #60A5FA50; }
+    .xai-badge-mild { background: #A78BFA20; color: #C4B5FD; border: 1px solid #A78BFA45; }
+    .xai-badge-minor { background: #374151; color: #9CA3AF; border: 1px solid #4B5563; }
+    .xai-driver-toward { font-size: 0.875rem; font-weight: 500; }
+    .xai-toward-attack { color: #F87171; }
+    .xai-toward-normal { color: #2DD4BF; }
+    .xai-driver-meaning {
+        color: #94A3B8;
+        font-size: 0.95rem;
+        line-height: 1.55;
+        margin-bottom: 0.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .xai-driver-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+    .xai-chip {
+        background: #131F2E;
+        color: #94A3B8;
+        border: 1px solid #1E3044;
+        border-radius: 999px;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.78rem;
+        font-weight: 500;
+    }
+    .xai-chip-agree { color: #2DD4BF; border-color: #14B8A650; background: #14B8A615; }
+    .xai-chip-global { color: #93C5FD; border-color: #60A5FA40; }
 </style>
 """
 
 st.set_page_config(
     page_title="Dual-Model Intrusion Detection",
-    page_icon="🛡️",
+    page_icon=":material/shield:",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -474,7 +681,7 @@ _chip_ready = '<span class="status-chip">Models ready</span>' if _models_loaded 
 _chip_xai = '<span class="status-chip">XAI ready</span>' if _models_loaded else '<span class="status-chip pending">XAI pending</span>'
 st.markdown(
     f'<div class="page-hero">'
-    f'<h1>🛡️ Dual-Model Intrusion Detection System</h1>'
+    f'<h1><span class="hero-shield">{HERO_SHIELD_SVG}</span> Dual-Model Intrusion Detection System</h1>'
     f'<p>Random Forest + XGBoost with SHAP, LIME &amp; ELI5 explanations</p>'
     f'<div class="status-chips">{_chip_ready}{_chip_xai}<span class="status-chip">Dual model</span></div>'
     f'</div>',
@@ -816,15 +1023,16 @@ with col1:
         ]
 
         if feature_reasons:
-            supporting_reasons = filter_toward_prediction_drivers(feature_reasons, top_n=5)
+            supporting_reasons = filter_toward_prediction_drivers(feature_reasons, top_n=DRIVER_TOP_N)
             if supporting_reasons:
-                summary, bullets = build_xai_insight_lines(
-                    supporting_reasons, pred_label, "Random Forest"
+                summary, _ = build_xai_insight_lines(
+                    supporting_reasons, pred_label, "Random Forest", top_n=DRIVER_TOP_N
                 )
                 st.markdown(summary)
-                st.markdown("")
-                st.markdown("**Key drivers (toward " + pred_label + ")**")
-                st.markdown("\n\n".join(bullets))
+                st.markdown(
+                    build_xai_driver_cards_html(supporting_reasons, pred_label),
+                    unsafe_allow_html=True,
+                )
                 fig, ax = create_chart(figsize=(10, 4))
                 features = chart_feature_labels(supporting_reasons)
                 impacts = [r['impact'] for r in supporting_reasons]
@@ -1148,15 +1356,16 @@ with col2:
             ]
             
             if feature_reasons:
-                supporting_reasons = filter_toward_prediction_drivers(feature_reasons, top_n=5)
+                supporting_reasons = filter_toward_prediction_drivers(feature_reasons, top_n=DRIVER_TOP_N)
                 if supporting_reasons:
-                    summary, bullets = build_xai_insight_lines(
-                        supporting_reasons, pred_label, "XGBoost"
+                    summary, _ = build_xai_insight_lines(
+                        supporting_reasons, pred_label, "XGBoost", top_n=DRIVER_TOP_N
                     )
                     st.markdown(summary)
-                    st.markdown("")
-                    st.markdown("**Key drivers (toward " + pred_label + ")**")
-                    st.markdown("\n\n".join(bullets))
+                    st.markdown(
+                        build_xai_driver_cards_html(supporting_reasons, pred_label),
+                        unsafe_allow_html=True,
+                    )
                     fig, ax = create_chart(figsize=(10, 4))
                     features = chart_feature_labels(supporting_reasons)
                     impacts = [r['impact'] for r in supporting_reasons]

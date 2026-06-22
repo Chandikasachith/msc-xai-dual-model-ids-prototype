@@ -5,6 +5,7 @@ Readable XAI text for the dashboard and LLM prompts.
 
 from __future__ import annotations
 
+from html import escape
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
@@ -254,6 +255,141 @@ def format_xai_reason_bullet(
         f"This {direction} and is a **{strength}** here (~{pct_share:.0f}% of influence from the top drivers)."
         f"{methods}"
     )
+
+
+def _strength_badge_class(pct_share: float) -> str:
+    if pct_share >= 35:
+        return "xai-badge-strong"
+    if pct_share >= 20:
+        return "xai-badge-medium"
+    if pct_share >= 10:
+        return "xai-badge-mild"
+    return "xai-badge-minor"
+
+
+def _method_chips_html(local_methods: Sequence[str], has_eli5: bool) -> str:
+    chips: List[str] = []
+    if len(local_methods) > 1:
+        chips.append('<span class="xai-chip xai-chip-agree">SHAP + LIME agree</span>')
+    elif len(local_methods) == 1:
+        chips.append(f'<span class="xai-chip">{local_methods[0]}</span>')
+    if has_eli5:
+        chips.append('<span class="xai-chip xai-chip-global">Model-wide</span>')
+    if not chips:
+        return ""
+    return '<div class="xai-driver-chips">' + "".join(chips) + "</div>"
+
+
+def _popup_direction_html(impact: float, predicted_class: str) -> str:
+    opposite = "Normal" if predicted_class == "Attack" else "Attack"
+    if impact > 0:
+        return f'Pushed toward <strong>{escape(predicted_class)}</strong>'
+    if impact < 0:
+        return f'Pulled toward <strong>{escape(opposite)}</strong>'
+    return "Had little effect on this prediction"
+
+
+def _format_driver_popup_html(
+    reason: Dict[str, Any],
+    predicted_class: str,
+    pct_share: float,
+) -> str:
+    """Rich hover panel with full driver detail."""
+    feat = reason["feature"]
+    label = escape(feature_label(feat))
+    raw_name = escape(feat)
+    meaning = escape(feature_meaning(feat))
+    strength = escape(_strength_phrase(pct_share))
+    impact = float(reason.get("impact", 0))
+    direction = _popup_direction_html(impact, predicted_class)
+    methods = ", ".join(reason.get("methods", [])) or "—"
+
+    rows = [
+        f'<div class="xai-popup-row"><span>Influence share</span><strong>{pct_share:.0f}%</strong></div>',
+        f'<div class="xai-popup-row"><span>Strength</span><strong>{strength}</strong></div>',
+        f'<div class="xai-popup-row"><span>Direction</span><span>{direction}</span></div>',
+        f'<div class="xai-popup-row"><span>XAI methods</span><strong>{escape(methods)}</strong></div>',
+    ]
+    if "value" in reason:
+        rows.insert(
+            0,
+            f'<div class="xai-popup-row"><span>Value in this row</span>'
+            f'<strong>{float(reason["value"]):.4g}</strong></div>',
+        )
+    if reason.get("shap_impact") is not None:
+        rows.append(
+            f'<div class="xai-popup-row"><span>SHAP impact</span>'
+            f'<strong>{float(reason["shap_impact"]):+.4f}</strong></div>'
+        )
+    if reason.get("lime_impact") is not None:
+        rows.append(
+            f'<div class="xai-popup-row"><span>LIME weight</span>'
+            f'<strong>{float(reason["lime_impact"]):+.4f}</strong></div>'
+        )
+
+    return (
+        f'<div class="xai-driver-popup">'
+        f'<div class="xai-popup-title">{label}</div>'
+        f'<div class="xai-popup-field">{raw_name}</div>'
+        f'<div class="xai-popup-body">{meaning}</div>'
+        f'<div class="xai-popup-grid">{"".join(rows)}</div>'
+        f'</div>'
+    )
+
+def format_xai_driver_card_html(
+    index: int,
+    reason: Dict[str, Any],
+    predicted_class: str,
+    pct_share: float,
+) -> str:
+    """HTML card for dashboard — highlights feature, strength, % and XAI methods."""
+    feat = reason["feature"]
+    label = feature_label(feat)
+    strength = _strength_phrase(pct_share)
+    badge_class = _strength_badge_class(pct_share)
+    meaning = feature_meaning(feat)
+    local_methods = [m for m in reason.get("methods", []) if m in ("SHAP", "LIME")]
+    has_eli5 = "ELI5" in reason.get("methods", [])
+    verdict_class = "xai-toward-attack" if predicted_class == "Attack" else "xai-toward-normal"
+    chips = _method_chips_html(local_methods, has_eli5)
+    popup = _format_driver_popup_html(reason, predicted_class, pct_share)
+    return (
+        f'<div class="xai-driver-card-wrap">'
+        f'<div class="xai-driver-card">'
+        f'<div class="xai-driver-top">'
+        f'<span class="xai-driver-index">{index}</span>'
+        f'<span class="xai-driver-name">{escape(label)}</span>'
+        f'<span class="xai-driver-pct">{pct_share:.0f}%</span>'
+        f'</div>'
+        f'<div class="xai-driver-meta">'
+        f'<span class="xai-badge {badge_class}">{strength.replace(" ", "&nbsp;")}</span>'
+        f'<span class="xai-driver-toward {verdict_class}">toward {predicted_class}</span>'
+        f'<span class="xai-driver-hint">Hover for details</span>'
+        f'</div>'
+        f'<div class="xai-driver-meaning">{escape(meaning)}</div>'
+        f'{chips}'
+        f'</div>'
+        f'{popup}'
+        f'</div>'
+    )
+
+
+def build_xai_driver_cards_html(
+    feature_reasons: Sequence[Dict[str, Any]],
+    predicted_class: str,
+    top_n: int = 5,
+) -> str:
+    """Stack of driver cards for the dashboard UI."""
+    top = feature_reasons[:top_n]
+    if not top:
+        return ""
+    top_impacts = [abs(float(r.get("impact", 0))) for r in top]
+    total_impact = sum(top_impacts) if top_impacts else 1.0
+    cards = []
+    for i, reason in enumerate(top, 1):
+        pct = (abs(float(reason.get("impact", 0))) / total_impact * 100) if total_impact > 0 else 0.0
+        cards.append(format_xai_driver_card_html(i, reason, predicted_class, pct))
+    return '<div class="xai-driver-list">' + "".join(cards) + "</div>"
 
 def _has_opposing_drivers(feature_reasons: Sequence[Dict[str, Any]], predicted_class: str) -> bool:
     toward = 0
