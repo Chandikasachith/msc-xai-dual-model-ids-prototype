@@ -47,6 +47,290 @@ from xai_insight_language import (
     format_xai_insight_block_for_llm,
 )
 
+CHART_TEAL = '#14B8A6'
+CHART_RED = '#F87171'
+CHART_BG = '#131F2E'
+CHART_TEXT = '#94A3B8'
+CHART_GRID = '#1E3044'
+
+
+def style_chart(ax, fig):
+    fig.patch.set_facecolor(CHART_BG)
+    ax.set_facecolor(CHART_BG)
+    ax.tick_params(colors=CHART_TEXT, labelsize=9)
+    ax.xaxis.label.set_color(CHART_TEXT)
+    ax.yaxis.label.set_color(CHART_TEXT)
+    ax.title.set_color('#F9FAFB')
+    ax.title.set_fontsize(11)
+    ax.title.set_fontweight('600')
+    for spine in ax.spines.values():
+        spine.set_color(CHART_GRID)
+    ax.grid(axis='x', color=CHART_GRID, alpha=0.45, linestyle='--')
+
+
+def polish_chart(ax):
+    """Re-apply dark-theme colors after set_title / set_xlabel calls."""
+    ax.title.set_color('#F9FAFB')
+    ax.xaxis.label.set_color(CHART_TEXT)
+    ax.yaxis.label.set_color(CHART_TEXT)
+    ax.tick_params(colors=CHART_TEXT, labelsize=9)
+
+
+def create_chart(figsize=(10, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
+    style_chart(ax, fig)
+    return fig, ax
+
+
+def bar_colors(values):
+    return [CHART_RED if x < 0 else CHART_TEAL for x in values]
+
+
+def render_kpi_row(cards):
+    parts = ['<div class="kpi-row">']
+    for card in cards:
+        parts.append(
+            f'<div class="kpi-card">'
+            f'<div class="kpi-label">{card["label"]}</div>'
+            f'<div class="kpi-value">{card["value"]}</div>'
+            f'<div class="kpi-sub">{card.get("sub", "")}</div>'
+            f'</div>'
+        )
+    parts.append('</div>')
+    st.markdown(''.join(parts), unsafe_allow_html=True)
+
+
+def render_prediction_panel(model_name, pred_label, confidence, proba, accent='rf'):
+    attack_pct = float(proba[0]) * 100
+    normal_pct = float(proba[1]) * 100
+    badge = 'badge-attack' if pred_label == 'Attack' else 'badge-normal'
+    st.markdown(
+        f'<div class="pred-panel pred-{accent}">'
+        f'<div class="pred-panel-header">{model_name}</div>'
+        f'<div class="pred-verdict {badge}">{pred_label}</div>'
+        f'<div class="pred-confidence">{confidence:.1f}% confidence</div>'
+        f'<div class="prob-bar-row"><span class="prob-label">Attack</span>'
+        f'<div class="prob-track"><div class="prob-fill attack-fill" style="width:{attack_pct:.1f}%"></div></div>'
+        f'<span class="prob-pct">{attack_pct:.1f}%</span></div>'
+        f'<div class="prob-bar-row"><span class="prob-label">Normal</span>'
+        f'<div class="prob-track"><div class="prob-fill normal-fill" style="width:{normal_pct:.1f}%"></div></div>'
+        f'<span class="prob-pct">{normal_pct:.1f}%</span></div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_title(title, subtitle=''):
+    sub = f'<div class="section-sub">{subtitle}</div>' if subtitle else ''
+    st.markdown(
+        f'<div class="section-title"><div class="section-bar"></div>'
+        f'<div><div class="section-heading">{title}</div>{sub}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_alert(message, level='info'):
+    st.markdown(f'<div class="alert-banner alert-{level}">{message}</div>', unsafe_allow_html=True)
+
+
+DASHBOARD_CSS = """
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', 'Segoe UI', sans-serif; }
+    .stApp { background-color: #0B1622; }
+    [data-testid="stSidebar"] {
+        background-color: #0F1B2A !important;
+        border-right: 1px solid #1E3044;
+    }
+    [data-testid="stSidebar"] .stMarkdown h1,
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        color: #F9FAFB !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.02em;
+    }
+    [data-testid="stMetric"] {
+        background: #131F2E;
+        border: 1px solid #1E3044;
+        border-radius: 10px;
+        padding: 0.75rem 1rem;
+    }
+    [data-testid="stMetric"] label { color: #94A3B8 !important; font-size: 0.75rem !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #F9FAFB !important; }
+    div[data-testid="stExpander"] {
+        background: #131F2E;
+        border: 1px solid #1E3044;
+        border-radius: 10px;
+    }
+    .stButton > button[kind="primary"] {
+        background: #14B8A6 !important;
+        color: #0B1622 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        width: 100%;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: #2DD4BF !important;
+        color: #0B1622 !important;
+    }
+    .page-hero {
+        background: linear-gradient(135deg, #0F1B2A 0%, #131F2E 100%);
+        border: 1px solid #1E3044;
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 1.5rem;
+    }
+    .page-hero h1 {
+        color: #F9FAFB;
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0 0 0.35rem 0;
+    }
+    .page-hero p {
+        color: #94A3B8;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+    .status-chips { margin-top: 0.85rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .status-chip {
+        background: #14B8A620;
+        color: #2DD4BF;
+        border: 1px solid #14B8A640;
+        border-radius: 999px;
+        padding: 0.2rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-chip.pending { background: #1E3044; color: #94A3B8; border-color: #374151; }
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.75rem;
+        margin: 0 0 1.25rem 0;
+    }
+    @media (max-width: 1100px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 700px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+    .kpi-card {
+        background: #131F2E;
+        border: 1px solid #1E3044;
+        border-radius: 10px;
+        padding: 1rem 1.1rem;
+    }
+    .kpi-label {
+        color: #94A3B8;
+        font-size: 0.72rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.35rem;
+    }
+    .kpi-value {
+        color: #F9FAFB;
+        font-size: 1.65rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+    .kpi-sub { color: #64748B; font-size: 0.72rem; margin-top: 0.25rem; }
+    .pred-panel {
+        background: #131F2E;
+        border: 1px solid #1E3044;
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .pred-panel.pred-rf { border-left: 3px solid #60A5FA; }
+    .pred-panel.pred-xgb { border-left: 3px solid #A78BFA; }
+    .pred-panel-header {
+        color: #94A3B8;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
+    }
+    .pred-verdict {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    .badge-attack { color: #F87171; }
+    .badge-normal { color: #2DD4BF; }
+    .pred-confidence { color: #64748B; font-size: 0.85rem; margin-bottom: 1rem; }
+    .prob-bar-row {
+        display: grid;
+        grid-template-columns: 3.5rem 1fr 3rem;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.45rem;
+    }
+    .prob-label { color: #94A3B8; font-size: 0.78rem; }
+    .prob-track {
+        background: #0B1622;
+        border-radius: 999px;
+        height: 8px;
+        overflow: hidden;
+    }
+    .prob-fill { height: 100%; border-radius: 999px; }
+    .attack-fill { background: linear-gradient(90deg, #F87171, #EF4444); }
+    .normal-fill { background: linear-gradient(90deg, #14B8A6, #2DD4BF); }
+    .prob-pct { color: #F9FAFB; font-size: 0.78rem; text-align: right; }
+    .section-title {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        margin: 1.25rem 0 0.85rem 0;
+    }
+    .section-bar {
+        width: 3px;
+        height: 2rem;
+        background: #14B8A6;
+        border-radius: 2px;
+        flex-shrink: 0;
+        margin-top: 0.1rem;
+    }
+    .section-heading {
+        color: #F9FAFB;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    .section-sub { color: #64748B; font-size: 0.82rem; margin-top: 0.15rem; }
+    .alert-banner {
+        border-radius: 10px;
+        padding: 0.85rem 1.1rem;
+        margin: 0.75rem 0 1rem 0;
+        font-size: 0.9rem;
+        line-height: 1.45;
+    }
+    .alert-success { background: #14B8A615; border: 1px solid #14B8A640; color: #2DD4BF; }
+    .alert-warning { background: #FBBF2415; border: 1px solid #FBBF2440; color: #FCD34D; }
+    .alert-info { background: #131F2E; border: 1px solid #1E3044; color: #94A3B8; }
+    .sidebar-card {
+        background: #131F2E;
+        border: 1px solid #1E3044;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.82rem;
+        color: #94A3B8;
+        line-height: 1.5;
+    }
+    .sidebar-card strong { color: #F9FAFB; }
+    .page-footer {
+        text-align: center;
+        color: #64748B;
+        font-size: 0.8rem;
+        padding: 1.5rem 0 0.5rem;
+        border-top: 1px solid #1E3044;
+        margin-top: 2rem;
+    }
+    .page-footer strong { color: #94A3B8; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+</style>
+"""
+
 st.set_page_config(
     page_title="Dual-Model Intrusion Detection",
     page_icon="🛡️",
@@ -54,47 +338,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: #1f77b4;
-        text-align: center;
-        padding: 1rem;
-        margin-bottom: 2rem;
-    }
-    .model-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 10px;
-        margin: 0.5rem 0;
-    }
-    .prediction-box {
-        font-size: 1.5rem;
-        font-weight: bold;
-        padding: 1rem;
-        border-radius: 5px;
-        text-align: center;
-        margin: 1rem 0;
-    }
-    .attack {
-        background-color: #ffcccc;
-        color: #cc0000;
-        border: 2px solid #cc0000;
-    }
-    .normal {
-        background-color: #ccffcc;
-        color: #006600;
-        border: 2px solid #006600;
-    }
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 0.5rem;
-        border-radius: 5px;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
 
 if 'xai_package' not in st.session_state:
     st.session_state.xai_package = None
@@ -225,15 +469,23 @@ def get_prediction_xgb(data, package):
     confidence = pred_proba[pred] * 100
     return pred_label, confidence, pred_proba, pred
 
-st.markdown('<div class="main-header">🛡️ Dual-Model Intrusion Detection System</div>', unsafe_allow_html=True)
-st.markdown("**Random Forest (CICIDS-2017) + XGBoost (CICIDS-2017) with XAI Explanations**")
-st.markdown("---")
+_models_loaded = st.session_state.xai_package is not None
+_chip_ready = '<span class="status-chip">Models ready</span>' if _models_loaded else '<span class="status-chip pending">Load models to begin</span>'
+_chip_xai = '<span class="status-chip">XAI ready</span>' if _models_loaded else '<span class="status-chip pending">XAI pending</span>'
+st.markdown(
+    f'<div class="page-hero">'
+    f'<h1>🛡️ Dual-Model Intrusion Detection System</h1>'
+    f'<p>Random Forest + XGBoost with SHAP, LIME &amp; ELI5 explanations</p>'
+    f'<div class="status-chips">{_chip_ready}{_chip_xai}<span class="status-chip">Dual model</span></div>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
 # --- sidebar ---
 with st.sidebar:
-    st.header("📊 Control Panel")
+    st.markdown("### Control Panel")
 
-    if st.button("🔄 Load Models", type="primary"):
+    if st.button("Load Models", type="primary"):
         with st.spinner("Loading models and initializing XAI..."):
             package = load_models()
             if package:
@@ -241,43 +493,39 @@ with st.sidebar:
                 explainers = initialize_xai_explainers(package)
                 st.session_state.rf_explainers = explainers.get('rf', {})
                 st.session_state.xgb_explainers = explainers.get('xgb', {})
-                st.success("✅ Models loaded successfully!")
-                st.balloons()
-    
-    st.markdown("---")
-    
+                try:
+                    st.toast("Models loaded successfully.", icon="✅")
+                except Exception:
+                    st.success("Models loaded successfully.")
+
     if st.session_state.xai_package is None:
-        st.warning("⚠️ Please load models first!")
-        st.info("Click 'Load Models' button above")
+        render_alert("Load models from the button above to start analysis.", "info")
         st.stop()
-    
-    st.header("📥 Input Method")
+
+    render_section_title("Input Method", "Sample data or CSV upload")
     input_method = st.radio(
         "Choose input method:",
         ["Use Sample Data", "Upload File"],
-        index=0
+        index=0,
+        label_visibility="collapsed",
     )
-    
-    st.markdown("---")
-    st.header("ℹ️ About")
-    st.info("""
-    **Dual-Model System:**
-    - Random Forest (CICIDS-2017)
-    - XGBoost (CICIDS-2017)
-    
-    **XAI Methods:**
-    - SHAP: Feature contributions
-    - LIME: Local explanations
-    - ELI5: Global importance
-    """)
+
+    st.markdown(
+        '<div class="sidebar-card">'
+        '<strong>Random Forest</strong><br>'
+        '<strong>XGBoost</strong><br><br>'
+        '<strong>XAI:</strong> SHAP · LIME · ELI5'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 # --- main ---
 package = st.session_state.xai_package
 
 # --- input: built-in test rows or CSV upload ---
 if input_method == "Use Sample Data":
-    st.subheader("📋 Sample Data Selection")
-    
+    render_section_title("Sample Data", "Pick a test row for each model")
+
     col1, col2 = st.columns(2)
     with col1:
         try:
@@ -290,7 +538,7 @@ if input_method == "Use Sample Data":
             )
             rf_sample_idx = rf_sample_display - 1
             rf_input = rf_samples[rf_sample_idx:rf_sample_idx+1]
-            st.info(f"Sample {rf_sample_display} selected")
+            st.caption(f"Sample {rf_sample_display} selected")
         except Exception as e:
             st.error(f"Error loading RF samples: {e}")
             st.stop()
@@ -306,13 +554,21 @@ if input_method == "Use Sample Data":
             )
             xgb_sample_idx = xgb_sample_display - 1
             xgb_input = xgb_samples[xgb_sample_idx:xgb_sample_idx+1]
-            st.info(f"Sample {xgb_sample_display} selected")
+            st.caption(f"Sample {xgb_sample_display} selected")
         except Exception as e:
             st.error(f"Error loading XGBoost samples: {e}")
             st.stop()
 
+    render_kpi_row([
+        {"label": "RF sample", "value": str(rf_sample_display), "sub": "test row index"},
+        {"label": "XGB sample", "value": str(xgb_sample_display), "sub": "test row index"},
+        {"label": "Input mode", "value": "Sample", "sub": "built-in data"},
+        {"label": "Models", "value": "2", "sub": "RF + XGBoost"},
+        {"label": "XAI", "value": "3", "sub": "SHAP · LIME · ELI5"},
+    ])
+
 elif input_method == "Upload File":
-    st.subheader("📤 File Upload")
+    render_section_title("File Upload", "CSV with header — columns auto-mapped")
     uploaded_file = st.file_uploader("Upload CSV (with header). Column names are auto-mapped.", type=['csv'])
     if not uploaded_file:
         st.info("Upload a CSV with header. Column names are auto-mapped. Optional: **Label** column.")
@@ -353,33 +609,34 @@ elif input_method == "Upload File":
     rf_normal = int((rf_labels == 'Normal').sum())
     xgb_attack = int((xgb_labels == 'Attack').sum())
     xgb_normal = int((xgb_labels == 'Normal').sum())
-    st.markdown("### 📋 Summary for decision-making")
-    sum_col1, sum_col2, sum_col3 = st.columns(3)
-    with sum_col1:
-        st.metric("Total rows", n_rows)
-    with sum_col2:
-        st.markdown("**Random Forest**")
-        st.caption(f"Attack: **{rf_attack}** · Normal: **{rf_normal}**")
-    with sum_col3:
-        st.markdown("**XGBoost**")
-        st.caption(f"Attack: **{xgb_attack}** · Normal: **{xgb_normal}**")
+    attack_idx_rf = np.where(rf_labels == 'Attack')[0]
+    attack_idx_xgb = np.where(xgb_labels == 'Attack')[0]
+    attack_idx_union = np.unique(np.concatenate([attack_idx_rf, attack_idx_xgb]))
+    both_agree_attack = np.intersect1d(attack_idx_rf, attack_idx_xgb)
+    n_both = len(both_agree_attack)
+    n_either = len(attack_idx_union)
+    render_section_title("Batch Summary", "Overview for decision-making")
+    render_kpi_row([
+        {"label": "Total flows", "value": f"{n_rows:,}", "sub": "rows processed"},
+        {"label": "RF flagged", "value": str(rf_attack), "sub": f"{rf_normal} normal"},
+        {"label": "XGB flagged", "value": str(xgb_attack), "sub": f"{xgb_normal} normal"},
+        {"label": "Both agree", "value": str(n_both), "sub": "attack consensus"},
+        {"label": "Either flagged", "value": str(n_either), "sub": "needs review"},
+    ])
     if 'Label' in raw.columns:
         true_labels = raw['Label'].astype(str).str.strip()
         true_attack = int((true_labels.str.lower() == 'attack').sum())
         true_normal = int((true_labels.str.lower() == 'normal').sum())
         st.caption(f"Ground truth (if present): Attack {true_attack}, Normal {true_normal}")
-    attack_idx_rf = np.where(rf_labels == 'Attack')[0]
-    attack_idx_xgb = np.where(xgb_labels == 'Attack')[0]
-    attack_idx_union = np.unique(np.concatenate([attack_idx_rf, attack_idx_xgb]))
-    both_agree_attack = np.intersect1d(attack_idx_rf, attack_idx_xgb)
-    st.markdown("**Suggested actions**")
+    render_section_title("Suggested Actions")
     if len(attack_idx_union) == 0:
-        st.success("No flows were predicted as Attack. Traffic appears normal; continue monitoring.")
+        render_alert("No flows were predicted as Attack. Traffic appears normal; continue monitoring.", "success")
     else:
-        n_both = len(both_agree_attack)
-        n_either = len(attack_idx_union)
-        st.warning(f"**{n_either}** flow(s) predicted as Attack (both models agree on **{n_both}** — higher confidence).")
-        st.markdown("**Recommendation:** Quarantine or deep-inspect these flows; export for SIEM/log review. If the same endpoints recur, consider blocking at perimeter or isolating the host.")
+        render_alert(
+            f"{n_either} flow(s) predicted as Attack (both models agree on {n_both} — higher confidence). "
+            "Quarantine or deep-inspect these flows; export for SIEM/log review.",
+            "warning",
+        )
         ip_col = None
         for c in ['Source IP', 'Source IP ', 'SourceIP']:
             if c in raw.columns:
@@ -439,39 +696,23 @@ elif input_method == "Upload File":
             "Use `.streamlit/secrets.toml` (see `secrets.toml.example`) or set `TEAMS_WEBHOOK_URL` before `streamlit run`. "
            
         )
-    st.markdown("---")
-    st.success(f"Processed {n_rows} row(s). Select a row below to view prediction and XAI.")
+    st.caption(f"Processed {n_rows} row(s). Select a row below to view prediction and XAI.")
     row_options = list(range(1, n_rows + 1))
     upload_row = st.selectbox("Row to predict and explain:", row_options, key="upload_row") - 1
     rf_input = np.asarray(X_rf_upload[upload_row:upload_row+1], dtype=np.float64)
     xgb_input = np.asarray(X_xgb_upload[upload_row:upload_row+1], dtype=np.float64)
 
 # --- single-row prediction + explanations ---
-st.markdown("---")
+render_section_title("Model Predictions", "Side-by-side RF and XGBoost with XAI")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("### 🌲 Random Forest Model ")
     rf_pred, rf_conf, rf_proba, rf_pred_idx = get_prediction_rf(rf_input, package)
+    render_prediction_panel("Random Forest", rf_pred, rf_conf, rf_proba, accent='rf')
 
-    pred_class = "attack" if rf_pred == "Attack" else "normal"
-    st.markdown(
-        f'<div class="prediction-box {pred_class}">{rf_pred}<br>Confidence: {rf_conf:.2f}%</div>',
-        unsafe_allow_html=True
-    )
-    
-    prob_col1, prob_col2 = st.columns(2)
-    with prob_col1:
-        st.metric("Attack Probability", f"{rf_proba[0]*100:.2f}%")
-    with prob_col2:
-        st.metric("Normal Probability", f"{rf_proba[1]*100:.2f}%")
-    
-    # per-row drivers: SHAP + LIME + ELI5 
-    st.markdown("---")
-    st.markdown("#### 💡 Why this prediction?")
+    render_section_title("Why this prediction?", "Key drivers toward the predicted class")
     st.caption(
-        "Key drivers for this prediction only (factors that support the predicted class). "
         "Opposing signals appear in Detailed XAI Explanations below."
     )
     
@@ -584,16 +825,16 @@ with col1:
                 st.markdown("")
                 st.markdown("**Key drivers (toward " + pred_label + ")**")
                 st.markdown("\n\n".join(bullets))
-                fig, ax = plt.subplots(figsize=(10, 4))
+                fig, ax = create_chart(figsize=(10, 4))
                 features = chart_feature_labels(supporting_reasons)
                 impacts = [r['impact'] for r in supporting_reasons]
-                ax.barh(range(len(features)), impacts, color='green', alpha=0.7)
+                ax.barh(range(len(features)), impacts, color=CHART_TEAL, alpha=0.85)
                 ax.set_yticks(range(len(features)))
-                ax.set_yticklabels(features)
+                ax.set_yticklabels(features, color=CHART_TEXT)
                 ax.set_xlabel(chart_xlabel_toward_prediction())
                 ax.set_title(chart_title(pred_label, "Random Forest"))
-                ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
-                ax.grid(axis='x', alpha=0.3)
+                ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                polish_chart(ax)
                 plt.tight_layout()
                 st.pyplot(fig)
             else:
@@ -612,9 +853,8 @@ with col1:
         st.warning(f"Could not generate reason summary: {e}")
         st.error(str(e))
 
-    st.markdown("---")
-    st.markdown("#### 🔍 Detailed XAI Explanations")
-    with st.expander("📊 SHAP Explanation (Feature Contributions)", expanded=True):
+    render_section_title("Detailed XAI", "SHAP, LIME and ELI5 for Random Forest")
+    with st.expander("SHAP — Feature Contributions", expanded=True):
         try:
             shap_explainer = st.session_state.rf_explainers.get('shap')
             if shap_explainer:
@@ -661,14 +901,15 @@ with col1:
                 )[:15]
                 df_shap = pd.DataFrame(feature_impacts, columns=['Feature', 'SHAP Value'])
                 df_shap['Impact'] = df_shap['SHAP Value'].apply(lambda x: 'Positive' if x > 0 else 'Negative')
-                fig, ax = plt.subplots(figsize=(10, 6))
-                colors = ['red' if x < 0 else 'green' for x in df_shap['SHAP Value']]
+                fig, ax = create_chart(figsize=(10, 6))
+                colors = bar_colors(df_shap['SHAP Value'])
                 ax.barh(range(len(df_shap)), df_shap['SHAP Value'], color=colors)
                 ax.set_yticks(range(len(df_shap)))
-                ax.set_yticklabels(df_shap['Feature'])
+                ax.set_yticklabels(df_shap['Feature'], color=CHART_TEXT)
                 ax.set_xlabel('SHAP Value (Impact on Prediction)')
-                ax.set_title('Top 15 Features - SHAP Values')
-                ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
+                ax.set_title('Top 15 Features — SHAP Values')
+                ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                polish_chart(ax)
                 plt.tight_layout()
                 st.pyplot(fig)
                 st.dataframe(df_shap, use_container_width=True)
@@ -677,7 +918,7 @@ with col1:
         except Exception as e:
             st.error(f"SHAP error: {e}")
 
-    with st.expander("🍋 LIME Explanation (Local Interpretable Model)"):
+    with st.expander("LIME — Local Interpretable Model"):
         try:
             lime_explainer = st.session_state.rf_explainers.get('lime')
             if lime_explainer:
@@ -691,14 +932,15 @@ with col1:
                 lime_list = lime_exp.as_list(label=safe_rf_pred_idx)
                 df_lime = pd.DataFrame(lime_list, columns=['Feature Condition', 'Weight'])
                 df_lime['Impact'] = df_lime['Weight'].apply(lambda x: 'Supports' if x > 0 else 'Opposes')
-                fig, ax = plt.subplots(figsize=(10, 6))
-                colors = ['red' if x < 0 else 'green' for x in df_lime['Weight']]
+                fig, ax = create_chart(figsize=(10, 6))
+                colors = bar_colors(df_lime['Weight'])
                 ax.barh(range(len(df_lime)), df_lime['Weight'], color=colors)
                 ax.set_yticks(range(len(df_lime)))
-                ax.set_yticklabels(df_lime['Feature Condition'], fontsize=8)
+                ax.set_yticklabels(df_lime['Feature Condition'], fontsize=8, color=CHART_TEXT)
                 ax.set_xlabel('LIME Weight')
-                ax.set_title('Top 15 Features - LIME Weights')
-                ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
+                ax.set_title('Top 15 Features — LIME Weights')
+                ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                polish_chart(ax)
                 plt.tight_layout()
                 st.pyplot(fig)
                 st.dataframe(df_lime, use_container_width=True)
@@ -707,7 +949,7 @@ with col1:
         except Exception as e:
             st.error(f"LIME error: {e}")
 
-    with st.expander("📈 ELI5 Global Feature Importance"):
+    with st.expander("ELI5 — Global Feature Importance"):
         try:
             eli5_importance = st.session_state.rf_explainers.get('eli5')
             if eli5_importance:
@@ -718,12 +960,13 @@ with col1:
                     key=lambda x: abs(x[1]), reverse=True
                 )[:15]
                 df_eli5 = pd.DataFrame(top_features, columns=['Feature', 'Importance'])
-                fig, ax = plt.subplots(figsize=(10, 6))
-                ax.barh(range(len(df_eli5)), df_eli5['Importance'], color='steelblue')
+                fig, ax = create_chart(figsize=(10, 6))
+                ax.barh(range(len(df_eli5)), df_eli5['Importance'], color=CHART_TEAL, alpha=0.85)
                 ax.set_yticks(range(len(df_eli5)))
-                ax.set_yticklabels(df_eli5['Feature'])
+                ax.set_yticklabels(df_eli5['Feature'], color=CHART_TEXT)
                 ax.set_xlabel('Permutation Importance')
-                ax.set_title('Top 15 Features - ELI5 Global Importance')
+                ax.set_title('Top 15 Features — ELI5 Global Importance')
+                polish_chart(ax)
                 plt.tight_layout()
                 st.pyplot(fig)
                 st.dataframe(df_eli5, use_container_width=True)
@@ -733,29 +976,14 @@ with col1:
             st.error(f"ELI5 error: {e}")
 
 with col2:
-        st.markdown("### ⚡ XGBoost Model ")
         xgb_pred, xgb_conf, xgb_proba, xgb_pred_idx = get_prediction_xgb(xgb_input, package)
+        render_prediction_panel("XGBoost", xgb_pred, xgb_conf, xgb_proba, accent='xgb')
 
-        pred_class = "attack" if xgb_pred == "Attack" else "normal"
-        st.markdown(
-            f'<div class="prediction-box {pred_class}">{xgb_pred}<br>Confidence: {xgb_conf:.2f}%</div>', 
-            unsafe_allow_html=True
-        )
-        
-        prob_col1, prob_col2 = st.columns(2)
-        with prob_col1:
-            st.metric("Attack Probability", f"{xgb_proba[0]*100:.2f}%")
-        with prob_col2:
-            st.metric("Normal Probability", f"{xgb_proba[1]*100:.2f}%")
-        
-        # per-row drivers: SHAP + LIME + ELI5 
-        st.markdown("---")
-        st.markdown("#### 💡 Why this prediction?")
+        render_section_title("Why this prediction?", "Key drivers toward the predicted class")
         st.caption(
-            "Key drivers for this prediction only (factors that support the predicted class). "
             "Opposing signals appear in Detailed XAI Explanations below."
         )
-        
+
         try:
             pred_label = "Attack" if xgb_pred == "Attack" else "Normal"
             st.markdown(f"**Prediction: {pred_label}** ({xgb_conf:.2f}% confidence)")
@@ -929,16 +1157,16 @@ with col2:
                     st.markdown("")
                     st.markdown("**Key drivers (toward " + pred_label + ")**")
                     st.markdown("\n\n".join(bullets))
-                    fig, ax = plt.subplots(figsize=(10, 4))
+                    fig, ax = create_chart(figsize=(10, 4))
                     features = chart_feature_labels(supporting_reasons)
                     impacts = [r['impact'] for r in supporting_reasons]
-                    ax.barh(range(len(features)), impacts, color='green', alpha=0.7)
+                    ax.barh(range(len(features)), impacts, color=CHART_TEAL, alpha=0.85)
                     ax.set_yticks(range(len(features)))
-                    ax.set_yticklabels(features)
+                    ax.set_yticklabels(features, color=CHART_TEXT)
                     ax.set_xlabel(chart_xlabel_toward_prediction())
                     ax.set_title(chart_title(pred_label, "XGBoost"))
-                    ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
-                    ax.grid(axis='x', alpha=0.3)
+                    ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                    polish_chart(ax)
                     plt.tight_layout()
                     st.pyplot(fig)
                 else:
@@ -957,10 +1185,8 @@ with col2:
             st.warning(f"Could not generate reason summary: {e}")
             st.error(str(e))
         
-        st.markdown("---")
-        st.markdown("#### 🔍 Detailed XAI Explanations")
-        
-        with st.expander("📊 SHAP Explanation (Feature Contributions)", expanded=True):
+        render_section_title("Detailed XAI", "SHAP, LIME and ELI5 for XGBoost")
+        with st.expander("SHAP — Feature Contributions", expanded=True):
             try:
                 shap_explainer = st.session_state.xgb_explainers.get('shap')
                 if shap_explainer:
@@ -1033,14 +1259,15 @@ with col2:
                     df_shap = pd.DataFrame(feature_impacts, columns=['Feature', 'SHAP Value'])
                     df_shap['Impact'] = df_shap['SHAP Value'].apply(lambda x: 'Positive' if x > 0 else 'Negative')
                     
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    colors = ['red' if x < 0 else 'green' for x in df_shap['SHAP Value']]
+                    fig, ax = create_chart(figsize=(10, 6))
+                    colors = bar_colors(df_shap['SHAP Value'])
                     ax.barh(range(len(df_shap)), df_shap['SHAP Value'], color=colors)
                     ax.set_yticks(range(len(df_shap)))
-                    ax.set_yticklabels(df_shap['Feature'])
+                    ax.set_yticklabels(df_shap['Feature'], color=CHART_TEXT)
                     ax.set_xlabel('SHAP Value (Impact on Prediction)')
-                    ax.set_title('Top 15 Features - SHAP Values')
-                    ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
+                    ax.set_title('Top 15 Features — SHAP Values')
+                    ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                    polish_chart(ax)
                     plt.tight_layout()
                     st.pyplot(fig)
                     
@@ -1050,7 +1277,7 @@ with col2:
             except Exception as e:
                 st.error(f"SHAP error: {e}")
         
-        with st.expander("🍋 LIME Explanation (Local Interpretable Model)"):
+        with st.expander("LIME — Local Interpretable Model"):
             try:
                 lime_explainer = st.session_state.xgb_explainers.get('lime')
                 if lime_explainer:
@@ -1065,14 +1292,15 @@ with col2:
                     df_lime = pd.DataFrame(lime_list, columns=['Feature Condition', 'Weight'])
                     df_lime['Impact'] = df_lime['Weight'].apply(lambda x: 'Supports' if x > 0 else 'Opposes')
                     
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    colors = ['red' if x < 0 else 'green' for x in df_lime['Weight']]
+                    fig, ax = create_chart(figsize=(10, 6))
+                    colors = bar_colors(df_lime['Weight'])
                     ax.barh(range(len(df_lime)), df_lime['Weight'], color=colors)
                     ax.set_yticks(range(len(df_lime)))
-                    ax.set_yticklabels(df_lime['Feature Condition'], fontsize=8)
+                    ax.set_yticklabels(df_lime['Feature Condition'], fontsize=8, color=CHART_TEXT)
                     ax.set_xlabel('LIME Weight')
-                    ax.set_title('Top 15 Features - LIME Weights')
-                    ax.axvline(x=0, color='black', linestyle='--', linewidth=0.5)
+                    ax.set_title('Top 15 Features — LIME Weights')
+                    ax.axvline(x=0, color='#64748B', linestyle='--', linewidth=0.5)
+                    polish_chart(ax)
                     plt.tight_layout()
                     st.pyplot(fig)
                     
@@ -1082,7 +1310,7 @@ with col2:
             except Exception as e:
                 st.error(f"LIME error: {e}")
         
-        with st.expander("📈 ELI5 Global Feature Importance"):
+        with st.expander("ELI5 — Global Feature Importance"):
             try:
                 eli5_importance = st.session_state.xgb_explainers.get('eli5')
                 if eli5_importance:
@@ -1094,12 +1322,13 @@ with col2:
                     )[:15]
                     df_eli5 = pd.DataFrame(top_features, columns=['Feature', 'Importance'])
                     
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.barh(range(len(df_eli5)), df_eli5['Importance'], color='steelblue')
+                    fig, ax = create_chart(figsize=(10, 6))
+                    ax.barh(range(len(df_eli5)), df_eli5['Importance'], color=CHART_TEAL, alpha=0.85)
                     ax.set_yticks(range(len(df_eli5)))
-                    ax.set_yticklabels(df_eli5['Feature'])
+                    ax.set_yticklabels(df_eli5['Feature'], color=CHART_TEXT)
                     ax.set_xlabel('Permutation Importance')
-                    ax.set_title('Top 15 Features - ELI5 Global Importance')
+                    ax.set_title('Top 15 Features — ELI5 Global Importance')
+                    polish_chart(ax)
                     plt.tight_layout()
                     st.pyplot(fig)
                     
@@ -1110,23 +1339,20 @@ with col2:
                 st.error(f"ELI5 error: {e}")
 
 # --- model agreement ---
-st.markdown("---")
-st.subheader("📊 Model Comparison")
-comp_col1, comp_col2, comp_col3, comp_col4 = st.columns(4)
-with comp_col1:
-    agreement = "✅ YES" if rf_pred == xgb_pred else "❌ NO"
-    st.metric("Agreement", agreement)
-with comp_col2:
-    st.metric("RF Prediction", rf_pred)
-with comp_col3:
-    st.metric("XGBoost Prediction", xgb_pred)
-with comp_col4:
-    conf_diff = abs(rf_conf - xgb_conf)
-    st.metric("Confidence Difference", f"{conf_diff:.2f}%")
+conf_diff = abs(rf_conf - xgb_conf)
+agreement_yes = rf_pred == xgb_pred
+render_section_title("Model Comparison", "Agreement and confidence across both models")
+render_kpi_row([
+    {"label": "Agreement", "value": "Yes" if agreement_yes else "No", "sub": "same prediction"},
+    {"label": "RF prediction", "value": rf_pred, "sub": f"{rf_conf:.1f}% confidence"},
+    {"label": "XGB prediction", "value": xgb_pred, "sub": f"{xgb_conf:.1f}% confidence"},
+    {"label": "Confidence Difference", "value": f"{conf_diff:.1f}%", "sub": "RF vs XGB"},
+    {"label": "Status", "value": "Aligned" if agreement_yes else "Review", "sub": "action hint"},
+])
 if rf_pred != xgb_pred:
-    st.warning("⚠️ **Models Disagree!** The two models have different predictions. Review XAI explanations to understand why.")
+    render_alert("Models disagree — review XAI explanations to understand why.", "warning")
 else:
-    st.success("✅ **Models Agree!** Both models predict the same class.")
+    render_alert("Both models predict the same class.", "success")
 
 # --- OpenAI analyst notes ---
 if input_method == "Upload File":
@@ -1142,8 +1368,7 @@ if input_method == "Upload File":
     )
     from teams_executive_summary import teams_upload_fingerprint
 
-    st.markdown("---")
-    st.subheader("🤖 AI analyst notes")
+    render_section_title("AI Analyst Notes", "Optional LLM advisory for flagged rows")
     st.warning(AI_DISCLAIMER_MARKDOWN)
     st.caption(
         "Uses this row’s **raw CSV values**, dashboard XAI summaries (RF + XGB), and SHAP/LIME/ELI5 detail. "
@@ -1254,12 +1479,11 @@ if input_method == "Upload File":
             else:
                 st.error(_e)
 
-st.markdown("---")
-st.markdown("""
-<div style='text-align: center; color: #666; padding: 1rem;'>
-    <strong>Dual-Model Intrusion Detection System</strong><br>
-    Random Forest (CICIDS-2017) + XGBoost (CICIDS-2017)<br>
-    Powered by SHAP, LIME, and ELI5
-</div>
-""", unsafe_allow_html=True)
+st.markdown(
+    '<div class="page-footer">'
+    '<strong>Dual-Model Intrusion Detection</strong><br>'
+    'Random Forest + XGBoost · SHAP · LIME · ELI5'
+    '</div>',
+    unsafe_allow_html=True,
+)
 
