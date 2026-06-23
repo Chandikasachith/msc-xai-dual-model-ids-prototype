@@ -180,9 +180,20 @@ def send_teams_payload(
         return False, "Install requests: pip install requests"
     try:
         r = requests.post(url, json=payload, timeout=30)
-        if r.status_code == 200:
+        if 200 <= r.status_code < 300:
             return True, "OK"
-        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+        detail = (r.text or "").strip()[:200]
+        if r.status_code == 403:
+            hint = (
+                "Microsoft rejected the webhook (403 Forbidden). "
+                "Legacy Office 365 Connector URLs are retired or invalid. "
+                "In Teams: channel ⋯ → Workflows → "
+                "'Post to a channel when a webhook request is received', "
+                "copy the new URL into TEAMS_WEBHOOK_URL (.streamlit/secrets.toml or env), "
+                "then restart Streamlit."
+            )
+            return False, f"HTTP 403: {detail or hint}"
+        return False, f"HTTP {r.status_code}: {detail or '(empty response)'}"
     except Exception as e:
         return False, str(e)
 
