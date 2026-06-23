@@ -1,0 +1,53 @@
+======================================================================
+XAI THESIS EVALUATION — Reproducible Results (N=100 stratified)
+======================================================================
+
+Sample: N=100 (Attack=50, Normal=50), random_seed=42.
+Indices loaded from: xai_thesis_sample_100_indices.json (unchanged; predefined sample).
+
+--- Indices used (first 20 and last 5) ---
+[223605, 189170, 255974, 2461, 148242, 266628, 119244, 30024, 176528, 261248, 266016, 281226, 201705, 157673, 146605, 92634, 187119, 116230, 235884, 21477] ... [31003, 212342, 101699, 134990, 66851]
+
+======================================================================
+
+--- RF ---
+  LIME Stability (R=5 runs, top-k=15):
+    Spearman: mean=0.7486, std=0.1095, median=0.7839, IQR=[0.6777, 0.8411], min=0.3924, max=0.9045, % Spearman<0.5 = 3.00%
+    LIME config: num_samples=5000, discretizer=quartile, kernel_width=7.07, feature_selection=auto
+  Fidelity (ablate top-k to 0 in standardized space):
+    SHAP k=3: flips=34, flips_rate%=34.0, acc_drop%=32.0, mean_Δp_attack=0.5558418363014063, median_Δp_attack=0.6572735062218777
+    SHAP k=5: flips=46, flips_rate%=46.0, acc_drop%=44.0, mean_Δp_attack=0.5867541129831986, median_Δp_attack=0.6358233301414584
+    LIME k=3: flips=32, flips_rate%=32.0, acc_drop%=30.0, mean_Δp_attack=0.49276384288572495, median_Δp_attack=0.4955215469116139
+    LIME k=5: flips=42, flips_rate%=42.0, acc_drop%=40.0, mean_Δp_attack=0.5525612656635822, median_Δp_attack=0.616352984662611
+    ELI5 k=3: flips=1, flips_rate%=1.0, acc_drop%=1.0, mean_Δp_attack=0.327098927337666, median_Δp_attack=0.460121365859815
+    ELI5 k=5: flips=1, flips_rate%=1.0, acc_drop%=1.0, mean_Δp_attack=0.3505770857970438, median_Δp_attack=0.4649847732466209
+  Runtime: SHAP mean/median/p95 (s): 0.0017/0.0015/0.0025; LIME: 0.1811/0.1799/0.1995; ELI5 one-off: 12.12 s
+  Feature ranking agreement (Spearman, top-k=15):
+    SHAP_vs_LIME: mean=0.4038, median=0.4189, IQR=[0.3091,0.5116], min=0.029, max=0.6859, % negative=0.0%
+    SHAP_vs_ELI5: mean=0.2578, median=0.2714, IQR=[0.2279,0.2856], min=0.1889, max=0.3015, % negative=0.0%
+    LIME_vs_ELI5: mean=0.1198, median=0.1157, IQR=[0.0684,0.1776], min=-0.2359, max=0.3247, % negative=7.0%
+  Jaccard top-10:
+    SHAP_vs_LIME: mean=0.3864, median=0.4286
+    SHAP_vs_ELI5: mean=0.2884, median=0.25
+    LIME_vs_ELI5: mean=0.2438, median=0.25
+
+--- XGB ---
+  LIME Stability (R=5 runs, top-k=15):
+    Spearman: mean=0.8717, std=0.0579, median=0.8872, IQR=[0.8478, 0.9168], min=0.7206, max=0.9443, % Spearman<0.5 = 0.00%
+    LIME config: num_samples=5000, discretizer=quartile, kernel_width=4.47, feature_selection=auto
+  Fidelity (ablate top-k to 0 in standardized space):
+    SHAP k=3: flips=22, flips_rate%=22.0, acc_drop%=20.0, mean_Δp_attack=0.4035535454750061, median_Δp_attack=0.2627328336238861
+    SHAP k=5: flips=37, flips_rate%=37.0, acc_drop%=35.0, mean_Δp_attack=0.5798246264457703, median_Δp_attack=0.7421584129333496
+    LIME k=3: flips=32, flips_rate%=32.0, acc_drop%=30.0, mean_Δp_attack=0.5608838796615601, median_Δp_attack=0.7070010900497437
+    LIME k=5: flips=37, flips_rate%=37.0, acc_drop%=27.0, mean_Δp_attack=0.4660491943359375, median_Δp_attack=0.6638053059577942
+    ELI5 k=3: flips=39, flips_rate%=39.0, acc_drop%=37.0, mean_Δp_attack=0.7056461572647095, median_Δp_attack=0.9421619176864624
+    ELI5 k=5: flips=39, flips_rate%=39.0, acc_drop%=39.0, mean_Δp_attack=0.7664896249771118, median_Δp_attack=0.982351541519165
+  Runtime: SHAP mean/median/p95 (s): 0.1832/0.1817/0.2005; LIME: 0.079/0.0769/0.0906; ELI5 one-off: 0.21 s
+  Feature ranking agreement (Spearman, top-k=15):
+    SHAP_vs_LIME: mean=0.3364, median=0.3515, IQR=[0.2227,0.4674], min=-0.1712, max=0.7137, % negative=3.0%
+    SHAP_vs_ELI5: mean=0.3229, median=0.3203, IQR=[0.1459,0.453], min=-0.0316, max=0.8075, % negative=5.0%
+    LIME_vs_ELI5: mean=0.3465, median=0.3674, IQR=[0.2587,0.4235], min=0.0045, max=0.6212, % negative=0.0%
+  Jaccard top-10:
+    SHAP_vs_LIME: mean=0.433, median=0.4286
+    SHAP_vs_ELI5: mean=0.4747, median=0.4286
+    LIME_vs_ELI5: mean=0.5489, median=0.5385

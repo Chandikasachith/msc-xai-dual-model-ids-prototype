@@ -42,16 +42,16 @@ Rules (no hallucination):
 
 Output Markdown in exactly this order:
 
-## Situation
+## Prediction summary
 2–3 sentences: what both models predicted, confidence, whether they agree, and the single most important pattern in plain language.
 
-## What stands out
+## Key evidence
 3–5 bullets. Each bullet: plain-language observation → cite **raw field name + value** and/or explainability driver. Separate raw values from SHAP/LIME scores.
 
-## Behaviour pattern (interpretive)
+## Possible traffic pattern
 If evidence supports a plausible pattern (e.g. volume-heavy, scan-like, irregular return traffic): one cautious sentence naming it, then 2–3 short evidence bullets.
 Otherwise: one clear sentence that you cannot determine attack type from this row alone, plus why.
-Do not label options as (A) or (B) — write natural prose only.
+Do not label options as (A) or (B) — write natural prose only. This section is interpretation only — not a model label and not enforcement advice.
 
 ## Recommended actions
 Numbered list, 4–6 items. Practical steps for this row (SIEM lookup, baseline comparison, monitor host, PCAP if repeats). If models disagree, prioritise verification over blocking.

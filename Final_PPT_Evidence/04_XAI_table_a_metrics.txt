@@ -1,0 +1,5 @@
+Table A: XAI metrics summary (stability, fidelity, runtime)
+============================================================
+Model LIME_Spearman_mean LIME_Spearman_%<0.5  SHAP_flips_k3  SHAP_acc_drop%_k3  LIME_flips_k3  LIME_acc_drop%_k3  ELI5_flips_k3  ELI5_acc_drop%_k3  SHAP_flips_k5  SHAP_acc_drop%_k5  LIME_flips_k5  LIME_acc_drop%_k5  ELI5_flips_k5  ELI5_acc_drop%_k5  SHAP_mean_s  LIME_mean_s  ELI5_one_off_s
+   RF             0.7486               3.00%             34               32.0             32               30.0              1                1.0             46               44.0             42               40.0              1                1.0       0.0017       0.1811           12.12
+  XGB             0.8717               0.00%             22               20.0             32               30.0             39               37.0             37               35.0             37               27.0             39               39.0       0.1832       0.0790            0.21

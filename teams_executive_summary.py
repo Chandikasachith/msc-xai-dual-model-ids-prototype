@@ -54,12 +54,7 @@ def teams_upload_fingerprint(
 
 
 def resolve_teams_webhook_url() -> str:
-    """
-    Webhook URL from (in order):
-    1) TEAMS_WEBHOOK_URL environment variable
-    2) .streamlit/secrets.toml (works for CLI and Streamlit)
-    3) streamlit.secrets when the Streamlit app is running
-    """
+    
     url = os.environ.get("TEAMS_WEBHOOK_URL", "").strip()
     if url:
         return url
@@ -101,7 +96,7 @@ def _teams_status_markdown(
     both_normal: int,
     disagree: int,
 ) -> str:
-    """Short markdown block for MessageCard (facts above carry the numbers)."""
+    """Short markdown block for MessageCard """
     lines: list[str] = []
     if both_attack == 0 and disagree == 0:
         lines.append("**Status: Normal** — no flows predicted as Attack; models agree everywhere.")
@@ -131,7 +126,7 @@ def build_teams_payload(
     completed_iso: Optional[str] = None,
 ) -> dict[str, Any]:
     """
-    Office 365 Connector MessageCard — renders as labeled rows (facts) in Teams, not one dense line.
+    Office 365 Connector MessageCard
     """
     if completed_iso is None:
         completed_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")

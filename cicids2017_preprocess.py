@@ -1,5 +1,5 @@
 """
-CSV preprocessing for RF and XGB — must match SecondModel/train_*_cicids2017*.py.
+CSV preprocessing for RF and XGB .
 """
 
 from __future__ import annotations
@@ -155,7 +155,7 @@ def _encode_categoricals(X_df, label_encoders):
 
 
 def preprocess_for_rf(df, scaler_rf, selector_rf, label_encoders_rf):
-    """Preprocess DataFrame through RF pipeline. Label column must already be dropped."""
+    """Preprocess DataFrame through RF pipeline. """
     df = add_engineered_features_rf(df)
     for col in COLUMNS_TO_DROP:
         if col in df.columns:
@@ -171,7 +171,7 @@ def preprocess_for_rf(df, scaler_rf, selector_rf, label_encoders_rf):
 
 
 def preprocess_for_xgb(df, scaler_xgb, selector_xgb, label_encoders_xgb):
-    """Preprocess DataFrame through XGB pipeline. Label column must already be dropped."""
+    """Preprocess DataFrame through XGB pipeline."""
     df = add_engineered_features_xgb(df)
     for col in COLUMNS_TO_DROP:
         if col in df.columns:

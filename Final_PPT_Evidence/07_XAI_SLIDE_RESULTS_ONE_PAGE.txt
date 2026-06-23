@@ -1,0 +1,55 @@
+XAI VALIDATION — ONE-PAGE SLIDE SUPPORT
+Dual-Model Intrusion Detection (Random Forest + XGBoost)
+================================================================
+
+Sample: N=100 stratified held-out test rows, seed=42
+Methods: SHAP, LIME, ELI5
+
+----------------------------------------------------------------
+SLIDE TEXT (PowerPoint)                 |  EVIDENCE (this run)
+----------------------------------------------------------------
+
+1) STABILITY
+   RF: 0.75 and XGB: 0.87
+   High consistency of explanations
+   Evidence: RF LIME Spearman = 0.7486 (3.00% rows < 0.5)
+             XGB LIME Spearman = 0.8717 (0.00% rows < 0.5)
+
+2) FIDELITY
+   Feature removal changed predictions
+   SHAP & LIME show strong influence
+   RF  SHAP k=3: 34 flips, 32.0% acc drop | LIME k=3: 32 flips, 30.0% acc drop
+   RF  SHAP k=5: 46 flips, 44.0% acc drop | LIME k=5: 42 flips, 40.0% acc drop
+   XGB SHAP k=3: 22 flips, 20.0% acc drop | LIME k=3: 32 flips, 30.0% acc drop
+   XGB SHAP k=5: 37 flips, 35.0% acc drop | LIME k=5: 37 flips, 27.0% acc drop
+
+3) RUNTIME (mean seconds)
+   SHAP (RF): Fast | LIME: Moderate | ELI5: Slower
+   RF  SHAP 0.0017 s | LIME 0.1811 s | ELI5 12.12 s
+   XGB SHAP 0.1832 s | LIME 0.0790 s | ELI5 0.21 s
+
+4) AGREEMENT
+   Jaccard up to 0.55
+   Spearman around 0.4 to 0.5 (SHAP vs LIME)
+   Together they provide broader model understanding
+   RF  SHAP vs LIME: Spearman 0.4038, Jaccard 0.3864
+   XGB SHAP vs LIME: Spearman 0.3364, Jaccard 0.433
+   Highest Jaccard: 0.5489 (XGB LIME vs ELI5 = 0.5489)
+
+----------------------------------------------------------------
+QUICK TABLE FOR VIVA / EXAMINER
+----------------------------------------------------------------
+
+Metric                       | RF           | XGBoost     
+-----------------------------+--------------+-------------
+LIME stability (mean)        | 0.75         | 0.87        
+SHAP flips (k=3)             | 34           | 22          
+LIME flips (k=3)             | 32           | 32          
+SHAP runtime mean (s)        | 0.0017       | 0.1832      
+LIME runtime mean (s)        | 0.1811       | 0.0790      
+SHAP vs LIME Spearman        | 0.40         | 0.34        
+Best Jaccard (top-10)        | 0.39         | 0.55        
+
+Global training importance charts: 01_RF_...png, 02_XGB_...png
+
+Regenerate: python build_final_ppt_evidence.py

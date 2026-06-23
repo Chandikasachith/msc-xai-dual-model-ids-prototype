@@ -1,7 +1,5 @@
 """
 XGBoost Binary Classification for CICIDS-2017 (Normal vs Attack)
-- Removes duplicates
-- Early stopping to prevent overfitting
 """
 
 import pandas as pd
@@ -86,7 +84,7 @@ for file in parquet_files:
         dataframes.append(df)
         print(f"    ✓ {len(df):,} samples")
     else:
-        print(f"    ⚠ File not found: {file}")
+        print(f"  File not found: {file}")
 
 if not dataframes:
     print("ERROR: No data files found!")
@@ -123,7 +121,7 @@ combined_df = add_engineered_features(combined_df)
 print(f"✓ Features: {combined_df.shape[1]}")
 print()
 
-# Step 4: Preprocessing
+# Step 4: Preprocessing 
 print("Step 4: Preprocessing...")
 columns_to_drop = ['Flow ID', 'Source IP', 'Destination IP', 'Timestamp', 
                    'SimillarHTTP', 'Inbound', 'Fwd Header Length.1']
@@ -168,7 +166,7 @@ X_train, X_temp, y_train, y_temp = train_test_split(
     stratify=y_encoded
 )
 
-# Second split: Split temp into 15% val and 15% test =
+# Second split: Split temp into 15% val and 15% test 
 X_val, X_test, y_val, y_test = train_test_split(
     X_temp, y_temp,
     test_size=TEST_SIZE / (VAL_SIZE + TEST_SIZE), 
@@ -187,7 +185,7 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_val_scaled = scaler.transform(X_val)
 X_test_scaled = scaler.transform(X_test)
-print("✓ Scaling complete (fit on train, transform on val/test)")
+print("✓ Scaling complete")
 print()
 
 # Step 7: Feature Selection 
@@ -197,7 +195,6 @@ X_train_selected = selector.fit_transform(X_train_scaled, y_train)
 X_val_selected = selector.transform(X_val_scaled)
 X_test_selected = selector.transform(X_test_scaled)
 print(f"✓ Selected top {selector.get_support().sum()} features from {X_train_scaled.shape[1]} features")
-print(f"  (fit on train, transform on val/test)")
 print()
 
 # Step 8: Class imbalance with scale_pos_weight
@@ -296,11 +293,11 @@ print(f"  Validation F1:       {val_f1:.4f}")
 print(f"  F1 Difference:       {abs(train_f1 - val_f1):.4f}")
 
 if train_acc - val_acc > 0.05:  # More than 5% gap
-    print("  ⚠ WARNING: Possible overfitting detected (train >> validation)")
+    print("   WARNING: Possible overfitting detected (train >> validation)")
 elif train_acc - val_acc > 0.02:  # More than 2% gap
-    print("  ⚠ CAUTION: Moderate gap between train and validation")
+    print("  CAUTION: Moderate gap between train and validation")
 else:
-    print("  ✓ No significant overfitting detected")
+    print("  No significant overfitting detected")
 print()
 
 # Step 10: Evaluate on TEST set 
@@ -409,6 +406,5 @@ print(f"Training Time:   {training_time:.2f} seconds ({training_time/60:.1f} min
 print()
 print("✓ Fixed 70/15/15 split (Train/Val/Test)")
 print("✓ Top 20 features, max_depth=2, stronger regularization")
-print("✓ Ready for dual-model system")
 print("="*70)
 

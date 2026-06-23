@@ -1,0 +1,58 @@
+XAI VALIDATION — copy for progress report or PowerPoint
+============================================================
+
+HOW WE VALIDATE (methods)
+----------------------------------------
+We evaluate post-hoc explanations on a fixed stratified sample from the held-out 
+test set: N=100 instances (50 Attack, 50 Normal), seed=42. 
+Row indices are fixed in xai_thesis_sample_100_indices.json (50 Attack + 50 Normal per model test set).
+
+Dimensions:
+  (1) Stability — LIME is run R=5 times per instance; Spearman correlation of feature 
+     rankings across runs (top-k=15).
+  (2) Fidelity — For SHAP, LIME, and ELI5, we ablate the top-k important features 
+     (k in [3, 5]) and report prediction flips and accuracy drop on the sample.
+  (3) Runtime — Mean time per instance for SHAP and LIME; ELI5 is one global fit.
+  (4) Agreement — Spearman correlation and Jaccard overlap (top-10) between explainer 
+     rankings (top-k=15 for Spearman).
+
+RESULTS (latest run — also in xai_thesis_table_a_metrics_n100.txt and xai_thesis_table_b_agreement_n100.txt)
+----------------------------------------
+Random Forest (CICIDS-2017):
+  • LIME stability: Spearman mean=0.7486, % instances with Spearman<0.5 = 3.00%
+  • Fidelity k=3: SHAP: 34 flips, 32.0% acc drop | LIME: 32 flips, 30.0% acc drop | ELI5: 1 flips, 1.0% acc drop
+  • Fidelity k=5: SHAP: 46 flips, 44.0% acc drop | LIME: 42 flips, 40.0% acc drop | ELI5: 1 flips, 1.0% acc drop
+  • Runtime (mean s): SHAP=0.0017, LIME=0.1811, ELI5 one-off=12.12 s
+
+XGBoost (CICIDS-2017):
+  • LIME stability: Spearman mean=0.8717, % instances with Spearman<0.5 = 0.00%
+  • Fidelity k=3: SHAP: 22 flips, 20.0% acc drop | LIME: 32 flips, 30.0% acc drop | ELI5: 39 flips, 37.0% acc drop
+  • Fidelity k=5: SHAP: 37 flips, 35.0% acc drop | LIME: 37 flips, 27.0% acc drop | ELI5: 39 flips, 39.0% acc drop
+  • Runtime (mean s): SHAP=0.1832, LIME=0.0790, ELI5 one-off=0.21 s
+
+Cross-method agreement (feature ranking)
+----------------------------------------
+RF:
+  • SHAP_vs_LIME: Spearman mean=0.4038, median=0.4189, % negative=0.0%
+  • SHAP_vs_ELI5: Spearman mean=0.2578, median=0.2714, % negative=0.0%
+  • LIME_vs_ELI5: Spearman mean=0.1198, median=0.1157, % negative=7.0%
+  • SHAP_vs_LIME: Jaccard top-10 mean=0.3864, median=0.4286
+  • SHAP_vs_ELI5: Jaccard top-10 mean=0.2884, median=0.25
+  • LIME_vs_ELI5: Jaccard top-10 mean=0.2438, median=0.25
+
+XGB:
+  • SHAP_vs_LIME: Spearman mean=0.3364, median=0.3515, % negative=3.0%
+  • SHAP_vs_ELI5: Spearman mean=0.3229, median=0.3203, % negative=5.0%
+  • LIME_vs_ELI5: Spearman mean=0.3465, median=0.3674, % negative=0.0%
+  • SHAP_vs_LIME: Jaccard top-10 mean=0.433, median=0.4286
+  • SHAP_vs_ELI5: Jaccard top-10 mean=0.4747, median=0.4286
+  • LIME_vs_ELI5: Jaccard top-10 mean=0.5489, median=0.5385
+
+SOURCE FILES (project Presentation_Evidence/)
+----------------------------------------
+  xai_thesis_evaluation_results_n100.txt  — full narrative
+  xai_thesis_table_a_metrics_n100.txt    — Table A (compact)
+  xai_thesis_table_b_agreement_n100.txt    — Table B (agreement)
+  xai_thesis_sample_100_indices.json  — reproducible sample indices
+
+Regenerate: python evaluate_xai.py --n100

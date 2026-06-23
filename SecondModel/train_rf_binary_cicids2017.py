@@ -95,7 +95,7 @@ for file in parquet_files:
         dataframes.append(df)
         print(f"    ✓ {len(df):,} samples")
     else:
-        print(f"    ⚠ File not found: {file}")
+        print(f" File not found: {file}")
 
 if not dataframes:
     print("ERROR: No data files found!")
@@ -173,18 +173,18 @@ TRAIN_SIZE = 0.70
 VAL_SIZE = 0.15
 TEST_SIZE = 0.15
 
-# First split: 70% train, 30% temp (which will become 15% val + 15% test)
+# First split: 70% train, 30% test
 X_train, X_temp, y_train, y_temp = train_test_split(
     X, y_encoded, 
-    test_size=(VAL_SIZE + TEST_SIZE),  # 30% for val+test
+    test_size=(VAL_SIZE + TEST_SIZE),  
     random_state=RANDOM_STATE, 
     stratify=y_encoded
 )
 
-# Second split: Split temp into 15% val and 15% test (50/50 of the 30%)
+# Second split: Split test into 15% val and 15% test 
 X_val, X_test, y_val, y_test = train_test_split(
     X_temp, y_temp,
-    test_size=TEST_SIZE / (VAL_SIZE + TEST_SIZE),  # 15% / 30% = 0.5
+    test_size=TEST_SIZE / (VAL_SIZE + TEST_SIZE),  
     random_state=RANDOM_STATE,
     stratify=y_temp
 )
@@ -203,7 +203,7 @@ X_test_scaled = scaler.transform(X_test)
 print("✓ Scaling complete (fit on train, transform on val/test)")
 print()
 
-# Step 7: Feature Selection (Optional - can use all features)
+# Step 7: Feature Selection 
 print("Step 7: Feature Selection...")
 print("  Using SelectKBest to select top features...")
 # Use top 50 features for Random Forest (can adjust)
@@ -219,8 +219,8 @@ selected_feature_names = [feature_names_all[i] for i in selected_feature_indices
 print(f"✓ Selected top {len(selected_feature_names)} features from {X_train_scaled.shape[1]} features")
 print()
 
-# Step 8: Use class weights (NO SMOTE - consistent with XGBoost)
-print("Step 8: Using class weights (NO SMOTE - consistent with XGBoost)...")
+# Step 8: Use class weights 
+print("Step 8: Using class weights ...")
 print(f"  Training samples: {X_train_selected.shape[0]:,}")
 # Calculate class weights
 class_counts = Counter(y_train)
@@ -228,23 +228,22 @@ total = sum(class_counts.values())
 class_weights = {cls: total / (len(class_counts) * count) for cls, count in class_counts.items()}
 print(f"  Class distribution: {dict(class_counts)}")
 print(f"  Class weights: {class_weights}")
-print("✓ Using imbalanced data with class weights (consistent with XGBoost)")
+print("✓ Using imbalanced data with class weights")
 print()
 
-# Use original training data (not balanced)
+# Use original training data 
 X_train_balanced = X_train_selected
 y_train_balanced = y_train
 
 # Step 9: Train Random Forest
 print("Step 9: Training Random Forest...")
-print("Parameters: 200 trees, max_depth=6 (EXACTLY matching XGBoost for fair comparison)")
-print("Using class weights (consistent with XGBoost approach)")
-print("NOTE: Matching XGBoost depth=6 to ensure fair comparison and avoid overfitting")
+print("Parameters: 200 trees, max_depth=6 ")
+print("Using class weights")
 print()
 
 rf_model = RandomForestClassifier(
-    n_estimators=200,          # Match XGBoost tree count
-    max_depth=6,               # Match XGBoost depth exactly for fair comparison
+    n_estimators=200,         
+    max_depth=6,               
     min_samples_split=20,     # Increased for more regularization
     min_samples_leaf=10,       # Increased for more regularization
     max_features='sqrt',      # Use sqrt of features
@@ -278,9 +277,9 @@ print(f"  Validation F1:       {val_f1:.4f}")
 print(f"  F1 Difference:       {abs(train_f1 - val_f1):.4f}")
 
 if train_acc - val_acc > 0.05:  # More than 5% gap
-    print("  ⚠ WARNING: Possible overfitting detected (train >> validation)")
+    print("  WARNING: Possible overfitting detected (train >> validation)")
 elif train_acc - val_acc > 0.02:  # More than 2% gap
-    print("  ⚠ CAUTION: Moderate gap between train and validation")
+    print("  CAUTION: Moderate gap between train and validation")
 else:
     print("  ✓ No significant overfitting detected")
 print()
@@ -368,8 +367,7 @@ joblib.dump(label_encoders, 'label_encoders_rf_cicids2017.pkl')
 joblib.dump(target_encoder, 'target_encoder_rf_cicids2017.pkl')
 joblib.dump(selected_feature_names, 'feature_names_rf_cicids2017.pkl')
 
-# Full test tensors (for thesis metrics / generate_cicids2017_dual_model_evidence.py).
-# Dashboard uses the first rows only for LIME/SHAP (see streamlit_dashboard.py).
+# Full test tensors 
 np.save('X_test_rf_cicids2017.npy', X_test_selected)
 np.save('y_test_rf_cicids2017.npy', y_test)
 np.save('y_pred_rf_cicids2017.npy', y_pred)
@@ -394,17 +392,14 @@ print()
 
 # Final summary
 print("="*70)
-print("RANDOM FOREST BINARY CLASSIFICATION COMPLETE - CICIDS-2017!")
+print("RANDOM FOREST BINARY CLASSIFICATION COMPLETE ")
 print("="*70)
 print(f"Final Accuracy:  {accuracy*100:.2f}%")
 print(f"Training Time:   {training_time:.2f} seconds ({training_time/60:.1f} minutes)")
 print()
 print("✓ Fixed 70/15/15 split (Train/Val/Test)")
-print("✓ Feature engineering applied")
-print("✓ Class weights (NO SMOTE - consistent with XGBoost)")
 print("✓ Top 50 features selected")
-print("✓ Random Forest with 200 trees, max_depth=6 (matching XGBoost)")
+print("✓ Random Forest with 200 trees, max_depth=6 ")
 print("✓ Test set untouched until final evaluation")
-print("✓ Ready for comparison with XGBoost model")
 print("="*70)
 

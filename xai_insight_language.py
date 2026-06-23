@@ -596,7 +596,7 @@ def collect_feature_reasons(
     eli5_importance: Any,
     predict_proba: Callable,
 ) -> List[Dict[str, Any]]:
-    """Merge SHAP/LIME per row; ELI5 tags features already in the list."""
+    """Merge SHAP/LIME ElI5 features"""
     all_reasons: Dict[str, Dict[str, Any]] = {}
     x_row = np.asarray(x_row, dtype=np.float64)
     if x_row.ndim == 1:

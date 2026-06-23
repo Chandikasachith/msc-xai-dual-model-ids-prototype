@@ -1,0 +1,18 @@
+Table B: Agreement metrics (Spearman distribution + Jaccard top-10 overlap)
+============================================================
+
+RF:
+  SHAP_vs_LIME Spearman: mean=0.4038, median=0.4189, IQR=[0.3091,0.5116], % neg=0.0%
+  SHAP_vs_ELI5 Spearman: mean=0.2578, median=0.2714, IQR=[0.2279,0.2856], % neg=0.0%
+  LIME_vs_ELI5 Spearman: mean=0.1198, median=0.1157, IQR=[0.0684,0.1776], % neg=7.0%
+  SHAP_vs_LIME Jaccard: mean=0.3864, median=0.4286
+  SHAP_vs_ELI5 Jaccard: mean=0.2884, median=0.25
+  LIME_vs_ELI5 Jaccard: mean=0.2438, median=0.25
+
+XGB:
+  SHAP_vs_LIME Spearman: mean=0.3364, median=0.3515, IQR=[0.2227,0.4674], % neg=3.0%
+  SHAP_vs_ELI5 Spearman: mean=0.3229, median=0.3203, IQR=[0.1459,0.453], % neg=5.0%
+  LIME_vs_ELI5 Spearman: mean=0.3465, median=0.3674, IQR=[0.2587,0.4235], % neg=0.0%
+  SHAP_vs_LIME Jaccard: mean=0.433, median=0.4286
+  SHAP_vs_ELI5 Jaccard: mean=0.4747, median=0.4286
+  LIME_vs_ELI5 Jaccard: mean=0.5489, median=0.5385
